@@ -72,4 +72,4 @@ hand-tracking-system/
 
 
 
-P.S. Код форматировам при помощи Google Gemini
+P.S. Код форматирован при помощи Google Gemini
