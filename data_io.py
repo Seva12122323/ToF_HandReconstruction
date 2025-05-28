@@ -1,7 +1,7 @@
 import numpy as np
 import os
 import glob
-import re # <--- Add this import
+import re 
 import config
 
 def find_frame_files(start_index, end_index):
@@ -14,28 +14,20 @@ def find_frame_files(start_index, end_index):
 
     frame_files = []
 
-    # --- MODIFICATION START ---
-    # Construct the glob pattern by replacing the format specifier with '*'
-    # This regex finds the shortest match between '{' and '}'
+
     glob_format_pattern = re.sub(r"\{.*?\}", "*", config.COLOR_FILENAME_FORMAT)
     color_search_pattern = os.path.join(color_dir, glob_format_pattern)
 
-    # Find all color files using the constructed glob pattern
+  
     all_color_files = sorted(glob.glob(color_search_pattern))
-    # --- MODIFICATION END ---
+
 
     if not all_color_files:
          raise FileNotFoundError(f"No color files found in '{color_dir}' matching pattern '{color_search_pattern}'.")
 
-    # ... (rest of the function remains the same)
 
-    # Extract frame numbers from color files assuming the format is consistent
     try:
-        # This part for determining max_frame_num might also need adjustment
-        # depending on how complex the filename format is.
-        # Let's try a more general regex approach here too.
-        # Find the part matching the original format specifier in the actual filenames
-        # Example: If format is "frame_{:05d}.jpg", find the number part.
+
         num_extract_regex = re.compile(re.sub(r"\{.*?\}", r"(\d+)", config.COLOR_FILENAME_FORMAT))
         frame_numbers = []
         for f in all_color_files:
@@ -60,14 +52,12 @@ def find_frame_files(start_index, end_index):
     print(f"Searching for frames from index {actual_start_index} to {actual_end_index}.")
 
     for i in range(actual_start_index, actual_end_index + 1):
-        frame_num_for_depth = i + 1 # Depth files seem to be 1-based in the original script
-        color_path = os.path.join(color_dir, config.COLOR_FILENAME_FORMAT.format(i)) # Use .format() here for specific files
-        depth_path = os.path.join(depth_dir, config.DEPTH_FILENAME_FORMAT.format(frame_num_for_depth)) # And here
+        frame_num_for_depth = i + 1 
+        color_path = os.path.join(color_dir, config.COLOR_FILENAME_FORMAT.format(i)) 
+        depth_path = os.path.join(depth_dir, config.DEPTH_FILENAME_FORMAT.format(frame_num_for_depth))
 
         if os.path.exists(color_path) and os.path.exists(depth_path):
             frame_files.append({'index': i, 'color': color_path, 'depth': depth_path})
-        # else:
-        #     print(f"Warning: Missing file pair for frame index {i} (Color: {os.path.exists(color_path)}, Depth: {os.path.exists(depth_path)})")
 
 
     if not frame_files:
@@ -89,18 +79,15 @@ def save_keypoints_to_file(filepath, frame_keypoints, frame_index, num_landmarks
     try:
         num_hands = frame_keypoints.shape[0]
         with open(filepath, "w") as f:
-            f.write(f"# Frame Index: {frame_index}\n") # Add frame index for reference
+            f.write(f"# Frame Index: {frame_index}\n") 
             for hand_idx in range(num_hands):
                 f.write(f"Hand {hand_idx}\n")
-                # Ensure we don't try to save more landmarks than available
                 landmarks_this_hand = min(num_landmarks_to_save, frame_keypoints.shape[1])
                 for landmark_idx in range(landmarks_this_hand):
                     coords = frame_keypoints[hand_idx, landmark_idx, :]
-                    # Handle potential NaN values from detection/filtering
                     if np.isnan(coords).any():
                         coord_str = "x=nan, y=nan, z=nan"
                     else:
-                        # Format with sufficient precision
                         coord_str = f"x={coords[0]:.6f}, y={coords[1]:.6f}, z={coords[2]:.6f}"
                     f.write(f"  Landmark {landmark_idx}: {coord_str}\n")
     except IOError as e:
@@ -132,7 +119,7 @@ def load_keypoints_from_file(filepath, expected_hands, expected_landmarks):
     landmarks_found_per_hand = {h: 0 for h in range(expected_hands)}
     current_hand_index = -1
 
-    # Regex for parsing (flexible with spacing and +/- signs)
+
     hand_regex = re.compile(r"Hand\s*(\d+)")
     landmark_regex = re.compile(r"Landmark\s*(\d+):\s*x=([-\d.nan]+),\s*y=([-\d.nan]+),\s*z=([-\d.nan]+)") # Allow 'nan'
 
@@ -140,19 +127,19 @@ def load_keypoints_from_file(filepath, expected_hands, expected_landmarks):
         with open(filepath, 'r') as f:
             for line_num, line in enumerate(f, 1):
                 line = line.strip()
-                if not line or line.startswith("#"): # Skip empty lines and comments
+                if not line or line.startswith("#"): 
                     continue
 
                 hand_match = hand_regex.match(line)
                 if hand_match:
                     try:
                         current_hand_index = int(hand_match.group(1))
-                        # Adjust index if file uses 1-based indexing
+                        
                         if current_hand_index >= expected_hands and current_hand_index == 1 and expected_hands == 1:
-                             current_hand_index = 0 # Allow Hand 1 if only 1 expected
-                        elif current_hand_index >= expected_hands: # Check if original file used 1-based index
+                             current_hand_index = 0 
+                        elif current_hand_index >= expected_hands: 
                              if current_hand_index -1 < expected_hands:
-                                 current_hand_index = current_hand_index -1 # Assume 1-based index
+                                 current_hand_index = current_hand_index -1 
                              else:
                                  print(f"Warning in {filepath}: Invalid hand index {hand_match.group(1)} on line {line_num}. Expected 0-{expected_hands-1}. Skipping hand.")
                                  current_hand_index = -1
@@ -169,7 +156,6 @@ def load_keypoints_from_file(filepath, expected_hands, expected_landmarks):
                 landmark_match = landmark_regex.match(line)
                 if landmark_match:
                     if current_hand_index == -1:
-                        # print(f"Warning in {filepath}: Found landmark data on line {line_num} before a valid 'Hand N' line. Skipping landmark.")
                         continue
 
                     try:
@@ -185,8 +171,6 @@ def load_keypoints_from_file(filepath, expected_hands, expected_landmarks):
                         if 0 <= lm_idx < expected_landmarks:
                             frame_data[current_hand_index, lm_idx, :] = [x, y, z]
                             landmarks_found_per_hand[current_hand_index] += 1
-                        # else: # Allow loading files with more landmarks (e.g., 22) even if expecting 21
-                            # print(f"Debug in {filepath}: Landmark index {lm_idx} out of expected range 0-{expected_landmarks-1} on line {line_num}. Ignoring.")
                             pass
 
                     except ValueError as e:
@@ -196,14 +180,6 @@ def load_keypoints_from_file(filepath, expected_hands, expected_landmarks):
                     except IndexError:
                         print(f"Warning in {filepath}: Data structure error accessing frame_data for hand {current_hand_index}, landmark {lm_idx}. Skipping landmark.")
                     continue
-
-                # print(f"Debug in {filepath}: Unrecognized line format on line {line_num}: '{line}'")
-
-        # Check completeness (optional, as NaNs indicate missing data)
-        # for hand_idx, count in landmarks_found_per_hand.items():
-        #     if count != expected_landmarks:
-        #         print(f"Warning in file {os.path.basename(filepath)}: Found {count}/{expected_landmarks} landmarks for Hand {hand_idx}.")
-
         return frame_data
 
     except Exception as e:
@@ -215,11 +191,11 @@ def load_all_keypoints(input_dir, file_pattern, expected_hands, expected_landmar
     """
     Loads keypoint data from all matching files in a directory into a single NumPy array.
 
-    Args:
+    Argf hands per frame.
+        expected_landmarks (int): Expected numbs:
         input_dir (str): Directory containing the keypoint files.
         file_pattern (str): Glob pattern for the files (e.g., '*_raw_keypoints.txt').
-        expected_hands (int): Expected number of hands per frame.
-        expected_landmarks (int): Expected number of landmarks per hand.
+        expected_hands (int): Expected number oer of landmarks per hand.
 
     Returns:
         tuple: (np.ndarray | None, list[int])
@@ -263,7 +239,6 @@ def load_all_keypoints(input_dir, file_pattern, expected_hands, expected_landmar
         frame_data = load_keypoints_from_file(file_path, expected_hands, expected_landmarks)
 
         if frame_data is not None:
-            # Verify shape before appending
             if frame_data.shape == (expected_hands, expected_landmarks, 3):
                 all_frames_data.append(frame_data)
                 loaded_frame_indices.append(frame_index)
