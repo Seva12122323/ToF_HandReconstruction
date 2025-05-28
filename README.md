@@ -38,7 +38,8 @@ hand-tracking-system/
    pip install -r requirements.txt
 ```
 
-1. Настройте параметры в файле ```
+1. Настройте параметры в файле
+   ```
    config.py
    ```
 
